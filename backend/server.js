@@ -1,0 +1,70 @@
+import express from "express";
+import cors from "cors";
+import "dotenv/config";
+import mongoose from "mongoose";
+import cookieParser from "cookie-parser";
+import helmet from "helmet";
+
+import authRouter from "./src/routes/authroutes.js";
+import getlocation from "./src/routes/geocode.js";
+const app = express();
+const isProd = process.env.NODE_ENV === "production";
+
+if (isProd) {
+  app.set("trust proxy", 1);
+}
+
+app.use(helmet());
+
+const allowedOrigins = [
+  process.env.FRONT_END_URL, 
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS blocked"));
+    }
+  },
+  credentials: true,
+}));
+
+app.use(express.json());
+app.use(cookieParser());
+
+app.use("/api/geocode", getlocation);
+app.use("/api/auth", authRouter);
+
+app.get("/", (req, res) => {
+  res.send("API WORKING");
+});
+
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: "Route not found" });
+});
+
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({
+    success: false,
+    message: "Internal server error",
+    error: !isProd ? err.message : undefined,
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log("✅ MongoDB connected");
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+  })
+  .catch(err => {
+    console.error("❌ MongoDB connection failed:", err);
+    process.exit(1);
+  });
