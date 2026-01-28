@@ -9,6 +9,7 @@ import authRouter from "./src/routes/authroutes.js";
 import getlocation from "./src/routes/geocode.js";
 import complaintRouter from "./src/routes/complaintRoutes.js";
 import { multerErrorHandler } from "./src/middleware/errorhandler.js";
+import supportRouter from "./src/routes/supportRoutes.js";
 const app = express();
 const isProd = process.env.NODE_ENV === "production";
 
@@ -39,6 +40,7 @@ app.use(cookieParser());
 app.use("/api/geocode", getlocation);
 app.use("/api/auth", authRouter);
 app.use("/api/complaints", complaintRouter);
+app.use("/api/support", supportRouter);
 app.use(multerErrorHandler);
 
 app.get("/", (req, res) => {
