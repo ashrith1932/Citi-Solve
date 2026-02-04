@@ -11,6 +11,7 @@ import complaintRouter from "./src/routes/complaintRoutes.js";
 import { multerErrorHandler } from "./src/middleware/errorhandler.js";
 import supportRouter from "./src/routes/supportRoutes.js";
 import staffRouter from "./src/routes/staffroutes.js";
+import adminRouter from "./src/routes/adminroutes.js";
 const app = express();
 const isProd = process.env.NODE_ENV === "production";
 
@@ -43,6 +44,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/complaints", complaintRouter);
 app.use("/api/support", supportRouter);
 app.use("/api/staff", staffRouter);
+app.use("/api/admin", adminRouter);
 app.use(multerErrorHandler);
 
 app.get("/", (req, res) => {
