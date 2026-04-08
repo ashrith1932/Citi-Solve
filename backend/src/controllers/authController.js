@@ -5,7 +5,13 @@ import transporter from "../config/nodemailer.js";
 import { WELCOME_EMAIL_TEMPLATE, EMAIL_VERIFY_TEMPLATE, PASSWORD_RESET_TEMPLATE } from '../config/emailTemplates.js';
 import { sendLoginSuccessEmail } from '../utils/loginAlert.js';
 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const EMAIL_PIPELINE_SUSPENDED_MESSAGE =
+    'The website is in production mode hosted on Vercel without a custom domain, so email services are suspended. To test the email pipeline, please contact admin.';
+
 const sendWelcomeEmail = async (name, email, role) => {
+    if (IS_PRODUCTION) return;
+
     const mailOptions = {
         from: process.env.SENDER_EMAIL,
         to: email,
@@ -64,14 +70,12 @@ const buildUserResponse = (user) => {
 
 
 const setTokenCookies = (res, accessToken, refreshToken) => {
-    const isProduction = process.env.NODE_ENV === 'production';
-    
     const commonOptions = {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? 'strict' : 'lax',
+        secure: IS_PRODUCTION,
+        sameSite: IS_PRODUCTION ? 'strict' : 'lax',
         path: '/',
-        domain: isProduction ? process.env.COOKIE_DOMAIN : undefined
+        domain: IS_PRODUCTION ? process.env.COOKIE_DOMAIN : undefined
     };
     
     res.cookie('accessToken', accessToken, {
@@ -86,11 +90,9 @@ const setTokenCookies = (res, accessToken, refreshToken) => {
 };
 
 const clearAuthCookies = (res) => {
-    const isProduction = process.env.NODE_ENV === 'production';
-    
     const clearOptions = {
         path: '/',
-        domain: isProduction ? process.env.COOKIE_DOMAIN : undefined
+        domain: IS_PRODUCTION ? process.env.COOKIE_DOMAIN : undefined
     };
     
     res.clearCookie('accessToken', clearOptions);
@@ -132,7 +134,6 @@ export const sendSignupOtp = async (req, res) => {
             });
         }
 
-        const otp = String(Math.floor(100000 + Math.random() * 900000));
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const userData = {
@@ -140,9 +141,9 @@ export const sendSignupOtp = async (req, res) => {
             email,
             password: hashedPassword,
             role,
-            isAccountVerified: false,
-            verifyOtp: otp,
-            verifyOtpExpireAt: Date.now() + 15 * 60 * 1000
+            isAccountVerified: IS_PRODUCTION,
+            verifyOtp: '',
+            verifyOtpExpireAt: 0
         };
 
         if (role === 'staff') {
@@ -155,15 +156,40 @@ export const sendSignupOtp = async (req, res) => {
             userData.district = district;
         }
 
+        if (!IS_PRODUCTION) {
+            const otp = String(Math.floor(100000 + Math.random() * 900000));
+            userData.verifyOtp = otp;
+            userData.verifyOtpExpireAt = Date.now() + 15 * 60 * 1000;
+        }
+
         const tempUser = new userModel(userData);
         await tempUser.save();
+
+        if (IS_PRODUCTION) {
+            const accessToken = generateAccessToken(tempUser._id, tempUser.role);
+            const refreshToken = generateRefreshToken(tempUser._id, tempUser.role);
+
+            tempUser.refreshToken = refreshToken;
+            await tempUser.save();
+
+            setTokenCookies(res, accessToken, refreshToken);
+
+            return res.json({
+                success: true,
+                message: 'Signup successful',
+                user: buildUserResponse(tempUser),
+                otpRequired: false,
+                emailServiceSuspended: true,
+                emailServiceMessage: EMAIL_PIPELINE_SUSPENDED_MESSAGE
+            });
+        }
 
         const mailOptions = {
             from: process.env.SENDER_EMAIL,
             to: email,
             subject: '🔐 Verify Your Caravan Chronicle Account',
             html: EMAIL_VERIFY_TEMPLATE
-                .replace("{{otp}}", otp)
+                .replace("{{otp}}", tempUser.verifyOtp)
                 .replace("{{name}}", name)
                 .replace("{{email}}", email)
         };
@@ -173,7 +199,8 @@ export const sendSignupOtp = async (req, res) => {
         return res.json({
             success: true,
             message: 'OTP sent to your email',
-            tempUserId: tempUser._id
+            tempUserId: tempUser._id,
+            otpRequired: true
         });
 
     } catch (error) {
@@ -185,6 +212,15 @@ export const sendSignupOtp = async (req, res) => {
 };
 
 export const verifySignupOtp = async (req, res) => {
+    if (IS_PRODUCTION) {
+        return res.json({
+            success: false,
+            message: 'OTP verification is disabled in production mode.',
+            emailServiceSuspended: true,
+            emailServiceMessage: EMAIL_PIPELINE_SUSPENDED_MESSAGE
+        });
+    }
+
     const { tempUserId, otp } = req.body;
 
     if (!tempUserId || !otp) {
@@ -245,7 +281,7 @@ export const verifySignupOtp = async (req, res) => {
             user: buildUserResponse(user)
         };
 
-        if (process.env.NODE_ENV !== 'production') {
+        if (!IS_PRODUCTION) {
             response.dev_tokens = {
                 accessToken,
                 refreshToken,
@@ -264,6 +300,15 @@ export const verifySignupOtp = async (req, res) => {
 };
 
 export const resendSignupOtp = async (req, res) => {
+    if (IS_PRODUCTION) {
+        return res.json({
+            success: false,
+            message: 'Signup OTP resend is unavailable in production mode.',
+            emailServiceSuspended: true,
+            emailServiceMessage: EMAIL_PIPELINE_SUSPENDED_MESSAGE
+        });
+    }
+
     const { tempUserId } = req.body;
 
     if (!tempUserId) {
@@ -341,7 +386,7 @@ export const sendLoginOtp = async (req, res) => {
             });
         }
 
-        if (!user.isAccountVerified) {
+        if (!user.isAccountVerified && !IS_PRODUCTION) {
             return res.json({
                 success: false,
                 message: 'Please verify your account first',
@@ -355,6 +400,28 @@ export const sendLoginOtp = async (req, res) => {
             return res.json({
                 success: false,
                 message: 'Invalid credentials'
+            });
+        }
+
+        if (IS_PRODUCTION) {
+            user.isAccountVerified = true;
+            user.verifyOtp = '';
+            user.verifyOtpExpireAt = 0;
+
+            const accessToken = generateAccessToken(user._id, user.role);
+            const refreshToken = generateRefreshToken(user._id, user.role);
+            user.refreshToken = refreshToken;
+
+            await user.save();
+            setTokenCookies(res, accessToken, refreshToken);
+
+            return res.json({
+                success: true,
+                message: 'Login successful',
+                user: buildUserResponse(user),
+                otpRequired: false,
+                emailServiceSuspended: true,
+                emailServiceMessage: EMAIL_PIPELINE_SUSPENDED_MESSAGE
             });
         }
 
@@ -382,7 +449,8 @@ export const sendLoginOtp = async (req, res) => {
         return res.json({
             success: true,
             message: 'Login OTP sent to your email',
-            userId: user._id
+            userId: user._id,
+            otpRequired: true
         });
 
     } catch (error) {
@@ -394,6 +462,15 @@ export const sendLoginOtp = async (req, res) => {
 };
 
 export const verifyLoginOtp = async (req, res) => {
+    if (IS_PRODUCTION) {
+        return res.json({
+            success: false,
+            message: 'OTP verification is disabled in production mode.',
+            emailServiceSuspended: true,
+            emailServiceMessage: EMAIL_PIPELINE_SUSPENDED_MESSAGE
+        });
+    }
+
     const { userId, otp } = req.body;
 
     if (!userId || !otp) {
@@ -411,13 +488,6 @@ export const verifyLoginOtp = async (req, res) => {
                 success: false,
                 message: 'User not found'
             });
-        }
-
-        if (user.loginOtpExpireAt < Date.now()) {
-            return res.json({
-            success: false,
-            message: 'OTP expired'
-        });
         }
 
         if (!user.verifyOtp || user.verifyOtpExpireAt < Date.now()) {
@@ -453,18 +523,20 @@ export const verifyLoginOtp = async (req, res) => {
             user: buildUserResponse(user)
         };
 
-        if (process.env.NODE_ENV !== 'production') {
+        if (!IS_PRODUCTION) {
             response.dev_tokens = {
                 accessToken,
                 refreshToken,
                 note: '⚠️ Dev only — tokens via cookies in production'
             };
         }
-        await sendLoginSuccessEmail({
-            email: user.email,
-            name: user.name,
-            ip: req.ip
-        });
+        if (!IS_PRODUCTION) {
+            await sendLoginSuccessEmail({
+                email: user.email,
+                name: user.name,
+                ip: req.ip
+            });
+        }
 
         return res.json(response);
 
@@ -477,6 +549,15 @@ export const verifyLoginOtp = async (req, res) => {
 };
 
 export const resendLoginOtp = async (req, res) => {
+    if (IS_PRODUCTION) {
+        return res.json({
+            success: false,
+            message: 'Login OTP resend is unavailable in production mode.',
+            emailServiceSuspended: true,
+            emailServiceMessage: EMAIL_PIPELINE_SUSPENDED_MESSAGE
+        });
+    }
+
     const { userId } = req.body;
 
     if (!userId) {
@@ -503,10 +584,7 @@ export const resendLoginOtp = async (req, res) => {
             });
         }
 
-        if (
-            user.loginOtpExpireAt &&
-            user.loginOtpExpireAt > Date.now() - 60 * 1000
-        ) {
+        if (user.verifyOtpExpireAt && user.verifyOtpExpireAt > Date.now()) {
             return res.json({
                 success: false,
                 message: 'Please wait before requesting a new OTP'
@@ -516,8 +594,8 @@ export const resendLoginOtp = async (req, res) => {
         const otp = String(Math.floor(100000 + Math.random() * 900000));
         const hashedOtp = await bcrypt.hash(otp, 10);
 
-        user.loginOtp = hashedOtp;
-        user.loginOtpExpireAt = Date.now() + 10 * 60 * 1000;
+        user.verifyOtp = hashedOtp;
+        user.verifyOtpExpireAt = Date.now() + 10 * 60 * 1000;
         await user.save();
 
         await transporter.sendMail({
@@ -622,6 +700,15 @@ export const refreshAccessToken = async (req, res) => {
 };
 
 export const sendResetOtp = async (req, res) => {
+    if (IS_PRODUCTION) {
+        return res.json({
+            success: false,
+            message: 'Password reset by email is unavailable in production mode.',
+            emailServiceSuspended: true,
+            emailServiceMessage: EMAIL_PIPELINE_SUSPENDED_MESSAGE
+        });
+    }
+
     try {
         const { email } = req.body;
 

@@ -36,6 +36,13 @@ export const useAuth = () => {
         return false;
       }
 
+      if (data.user?.role) {
+        setPendingUserId(null);
+        setOtpSent(false);
+        navigate(`/${data.user.role}/home`);
+        return true;
+      }
+
       setPendingUserId(data.tempUserId);
       setOtpSent(true);
       return true;
@@ -70,6 +77,13 @@ export const useAuth = () => {
         return false;
       }
 
+      if (data.user?.role) {
+        setPendingUserId(null);
+        setOtpSent(false);
+        navigate(`/${data.user.role}/home`);
+        return true;
+      }
+
       setPendingUserId(data.userId);
       setOtpSent(true);
       return true;
@@ -88,8 +102,9 @@ export const useAuth = () => {
     setLoading(true);
     setError('');
     if (!pendingUserId) {
-    setError("OTP session expired. Please login again.");
-    return false;
+      setError("OTP session expired. Please login again.");
+      setLoading(false);
+      return false;
     }
 
     const endpoint =

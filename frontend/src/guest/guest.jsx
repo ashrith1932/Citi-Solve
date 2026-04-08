@@ -203,6 +203,9 @@ const CitiSolveLanding = () => {
     textAlign: 'center',
   };
 
+  const productionEmailNotice =
+    'The website is in production mode hosted in Vercel without an owned domain, so email services are suspended. To test our email pipeline, please contact admin.';
+
   return (
     <div className={styles.container}>
       <style>
@@ -385,6 +388,11 @@ const CitiSolveLanding = () => {
                 <label className={styles.label}>Password</label>
                 <input type="password" name='password' disabled={otpSent} className={styles.input} placeholder="Enter your password" required />
               </div>
+              {import.meta.env.PROD && authMode === 'login' && (
+                <div style={errorMessageStyles}>
+                  {productionEmailNotice}
+                </div>
+              )}
               {error && (
                 <div style={errorMessageStyles}>
                   {error}
@@ -414,7 +422,9 @@ const CitiSolveLanding = () => {
                   {loading ? (
                     <div style={loaderStyles}></div>
                   ) : (
-                    "Get OTP ✉️"
+                    import.meta.env.PROD
+                      ? (authMode === 'login' ? 'Login' : 'Create Account')
+                      : 'Get OTP'
                   )}
                 </button>
               )}

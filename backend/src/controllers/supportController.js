@@ -1,5 +1,8 @@
 import supportModel from '../models/supportModel.js';
 import transporter from "../config/nodemailer.js";
+
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
 export const submitSupportMessage = async (req, res) => {
   try {
     const { subject, category, message } = req.body;
@@ -30,11 +33,15 @@ export const submitSupportMessage = async (req, res) => {
         <p><em>Reply directly to ${user.email} to respond.</em></p>
       `
     };
-    await transporter.sendMail(mailOptions);
+    if (!IS_PRODUCTION) {
+      await transporter.sendMail(mailOptions);
+    }
     
     res.status(201).json({ 
       success: true, 
-      message: 'Support message sent successfully. Admin will respond via email.',
+      message: IS_PRODUCTION
+        ? 'Support message submitted. Email notifications are suspended in production mode.'
+        : 'Support message sent successfully. Admin will respond via email.',
       support 
     });
   } catch (error) {
