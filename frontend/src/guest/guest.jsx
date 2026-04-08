@@ -203,8 +203,14 @@ const CitiSolveLanding = () => {
     textAlign: 'center',
   };
 
-  const productionEmailNotice =
-    'The website is in production mode hosted in Vercel without an owned domain, so email services are suspended. To test our email pipeline, please contact admin.';
+  const productionEmailNotice = (
+    <>
+      The website is in production mode hosted on Vercel without a custom domain, so email services are currently suspended. To test our email pipeline, please{" "}
+      <a href="mailto:citisolveotp@gmail.com" style={{ color: "blue", fontWeight: "bold", textDecoration: "underline" }}>
+        contact admin
+      </a>.
+    </>
+  );
 
   return (
     <div className={styles.container}>
