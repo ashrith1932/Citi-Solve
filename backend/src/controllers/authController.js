@@ -8,6 +8,15 @@ import { sendLoginSuccessEmail } from '../utils/loginAlert.js';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const EMAIL_PIPELINE_SUSPENDED_MESSAGE =
     'The website is in production mode hosted on Vercel without a custom domain, so email services are suspended. To test the email pipeline, please contact admin.';
+const COOKIE_DOMAIN = (process.env.COOKIE_DOMAIN || "").trim();
+
+const buildCookieOptions = () => ({
+    httpOnly: true,
+    secure: IS_PRODUCTION,
+    sameSite: IS_PRODUCTION ? 'none' : 'lax',
+    path: '/',
+    ...(IS_PRODUCTION && COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {})
+});
 
 const sendWelcomeEmail = async (name, email, role) => {
     if (IS_PRODUCTION) return;
@@ -70,13 +79,7 @@ const buildUserResponse = (user) => {
 
 
 const setTokenCookies = (res, accessToken, refreshToken) => {
-    const commonOptions = {
-        httpOnly: true,
-        secure: IS_PRODUCTION,
-        sameSite: IS_PRODUCTION ? 'strict' : 'lax',
-        path: '/',
-        domain: IS_PRODUCTION ? process.env.COOKIE_DOMAIN : undefined
-    };
+    const commonOptions = buildCookieOptions();
     
     res.cookie('accessToken', accessToken, {
         ...commonOptions,
@@ -92,7 +95,7 @@ const setTokenCookies = (res, accessToken, refreshToken) => {
 const clearAuthCookies = (res) => {
     const clearOptions = {
         path: '/',
-        domain: IS_PRODUCTION ? process.env.COOKIE_DOMAIN : undefined
+        ...(IS_PRODUCTION && COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {})
     };
     
     res.clearCookie('accessToken', clearOptions);
@@ -669,13 +672,9 @@ export const refreshAccessToken = async (req, res) => {
 
         const newAccessToken = generateAccessToken(user._id, user.role);
 
-        const isProduction = process.env.NODE_ENV === 'production';
+        const cookieOptions = buildCookieOptions();
         res.cookie('accessToken', newAccessToken, {
-            httpOnly: true,
-            secure: isProduction,
-            sameSite: isProduction ? 'strict' : 'lax',
-            path: '/',
-            domain: isProduction ? process.env.COOKIE_DOMAIN : undefined,
+            ...cookieOptions,
             maxAge: 4 * 60 * 60 * 1000
         });
 
