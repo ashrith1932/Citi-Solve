@@ -114,11 +114,21 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 16px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.adminInfo > div {
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
 }
 
 .adminAvatar {
   width: 40px;
   height: 40px;
+  min-width: 40px;
+  max-width: 40px;
   border-radius: 50%;
   background: linear-gradient(135deg, #444, #666);
   display: flex;
@@ -127,6 +137,7 @@
   font-weight: 700;
   color: #fff;
   font-size: 16px;
+  flex: 0 0 40px;
 }
 
 .adminName {
@@ -134,11 +145,21 @@
   font-weight: 600;
   color: #fff;
   margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  display: block;
 }
 
 .adminRole {
   font-size: 11px;
   color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  display: block;
 }
 
 .logoutBtn {

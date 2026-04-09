@@ -19,7 +19,8 @@ body {
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background: linear-gradient(135deg, #fefae0 0%, #f4e8c1 100%);
+  width: 100vw;
+  background-color: inherit;
   font-family: 'Poppins', sans-serif;
 }
 
