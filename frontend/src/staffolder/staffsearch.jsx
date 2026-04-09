@@ -388,7 +388,7 @@ const SearchStaff = () => {
 
   // Full Screen Loader
   if (hookLoading && !user) {
-    return <div className={styles.pageLoader}><div className={styles.loadingSpinner}></div><div>Loading...</div></div>;
+    return <div className="global-spinner-container"><div className="global-spinner"></div></div>;
   }
 
   if (!user) {

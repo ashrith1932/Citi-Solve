@@ -318,7 +318,7 @@ const CitiSolveLanding = () => {
                   </div>
                   
                   {!otpSent && (
-                    <div className={styles.formGroup} style={{ marginBottom: '1rem' }}>
+                    <div className={`${styles.formGroup} ${styles.fetchLocationBtnContainer}`} style={{ marginBottom: '1rem' }}>
                       <button 
                         type="button" 
                         onClick={fetchLocation} 

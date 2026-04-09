@@ -9,6 +9,9 @@ export const getAdminDashboard = async (req, res) => {
   try {
     const { state, district } = req.user; 
 
+    const stateRegex = new RegExp(`^${state}$`, 'i');
+    const districtRegex = new RegExp(`^${district}$`, 'i');
+
     const [
       totalComplaints,
       pendingComplaints,
@@ -19,14 +22,14 @@ export const getAdminDashboard = async (req, res) => {
       totalStaff,
       totalDepartments
     ] = await Promise.all([
-      complaintModel.countDocuments({ state, district }),
-      complaintModel.countDocuments({ state, district, status: 'pending' }),
-      complaintModel.countDocuments({ state, district, status: 'assigned' }),
-      complaintModel.countDocuments({ state, district, status: 'in-progress' }),
-      complaintModel.countDocuments({ state, district, status: 'resolved' }),
-      complaintModel.countDocuments({ state, district, status: 'rejected' }),
-      userModel.countDocuments({ role: 'staff', state, district }),
-      userModel.distinct('department', { role: 'staff', state, district }).then(arr => arr.length)
+      complaintModel.countDocuments({ state: stateRegex, district: districtRegex }),
+      complaintModel.countDocuments({ state: stateRegex, district: districtRegex, status: 'pending' }),
+      complaintModel.countDocuments({ state: stateRegex, district: districtRegex, status: 'assigned' }),
+      complaintModel.countDocuments({ state: stateRegex, district: districtRegex, status: 'in-progress' }),
+      complaintModel.countDocuments({ state: stateRegex, district: districtRegex, status: 'resolved' }),
+      complaintModel.countDocuments({ state: stateRegex, district: districtRegex, status: 'rejected' }),
+      userModel.countDocuments({ role: 'staff', state: stateRegex, district: districtRegex }),
+      userModel.distinct('department', { role: 'staff', state: stateRegex, district: districtRegex }).then(arr => arr.length)
     ]);
 
     res.json({
@@ -56,8 +59,11 @@ export const getDepartmentWorkload = async (req, res) => {
   try {
     const { state, district } = req.user;
 
+    const stateRegex = new RegExp(`^${state}$`, 'i');
+    const districtRegex = new RegExp(`^${district}$`, 'i');
+
     const workload = await complaintModel.aggregate([
-      { $match: { state, district } }, 
+      { $match: { state: stateRegex, district: districtRegex } }, 
       {
         $group: {
           _id: '$category',
@@ -144,7 +150,9 @@ export const getAllComplaints = async (req, res) => {
       limit = 10
     } = req.query;
 
-    const query = { state, district };
+    const stateRegex = new RegExp(`^${state}$`, 'i');
+    const districtRegex = new RegExp(`^${district}$`, 'i');
+    const query = { state: stateRegex, district: districtRegex };
 
     if (status !== 'all') {
       const validStatuses = ['pending', 'assigned', 'in-progress', 'resolved', 'rejected'];
@@ -213,8 +221,11 @@ export const getComplaintById = async (req, res) => {
     const { state, district } = req.user;
     const { id } = req.params;
 
+    const stateRegex = new RegExp(`^${state}$`, 'i');
+    const districtRegex = new RegExp(`^${district}$`, 'i');
+
     const complaint = await complaintModel
-      .findOne({ _id: id, state, district }) 
+      .findOne({ _id: id, state: stateRegex, district: districtRegex }) 
       .populate('citizen', 'name email phone state district')
       .populate('assignedTo', 'name email state district department')
       .populate('assignedBy', 'name email')
@@ -240,7 +251,10 @@ export const getAvailableStaffForComplaint = async (req, res) => {
     const { state, district } = req.user;
     const { id } = req.params;
 
-    const complaint = await complaintModel.findOne({ _id: id, state, district });
+    const stateRegex = new RegExp(`^${state}$`, 'i');
+    const districtRegex = new RegExp(`^${district}$`, 'i');
+
+    const complaint = await complaintModel.findOne({ _id: id, state: stateRegex, district: districtRegex });
     if (!complaint) {
       return res.status(404).json({
         success: false,
@@ -250,8 +264,8 @@ export const getAvailableStaffForComplaint = async (req, res) => {
     const availableStaff = await userModel
       .find({
         role: 'staff',
-        state: state, 
-        district: district, 
+        state: stateRegex, 
+        district: districtRegex, 
         department: complaint.category,
         isAccountVerified: true
       })
@@ -317,7 +331,10 @@ export const assignComplaintToStaff = async (req, res) => {
       });
     }
 
-    const complaint = await complaintModel.findOne({ _id: id, state, district });
+    const stateRegex = new RegExp(`^${state}$`, 'i');
+    const districtRegex = new RegExp(`^${district}$`, 'i');
+
+    const complaint = await complaintModel.findOne({ _id: id, state: stateRegex, district: districtRegex });
     if (!complaint) {
       return res.status(404).json({
         success: false,
@@ -344,7 +361,11 @@ export const assignComplaintToStaff = async (req, res) => {
         error: 'Staff not found or not verified'
       });
     }
-    if (staff.state !== state || staff.district !== district || staff.department !== complaint.category) {
+    if (
+      staff.state.toLowerCase() !== state.toLowerCase() || 
+      staff.district.toLowerCase() !== district.toLowerCase() || 
+      staff.department !== complaint.category
+    ) {
       return res.status(400).json({
         success: false,
         error: 'Staff must be in the same district and correct department',
@@ -389,7 +410,9 @@ export const getAllStaff = async (req, res) => {
       page = 1,
       limit = 10
     } = req.query;
-    const query = { role: 'staff', state, district };
+    const stateRegex = new RegExp(`^${state}$`, 'i');
+    const districtRegex = new RegExp(`^${district}$`, 'i');
+    const query = { role: 'staff', state: stateRegex, district: districtRegex };
     if (department !== 'all') query.department = department;
 
     if (search && search.trim()) {
@@ -458,8 +481,11 @@ export const getStaffById = async (req, res) => {
     const { state, district } = req.user;
     const { id } = req.params;
 
+    const stateRegex = new RegExp(`^${state}$`, 'i');
+    const districtRegex = new RegExp(`^${district}$`, 'i');
+
     const staff = await userModel
-      .findOne({ _id: id, role: 'staff', state, district }) 
+      .findOne({ _id: id, role: 'staff', state: stateRegex, district: districtRegex }) 
       .select('-password -verifyOtp -resetOtp -refreshToken')
       .lean();
 
@@ -603,18 +629,21 @@ export const getAllDepartments = async (req, res) => {
   try {
     const { state, district } = req.user;
 
+    const stateRegex = new RegExp(`^${state}$`, 'i');
+    const districtRegex = new RegExp(`^${district}$`, 'i');
+
     const departments = ['roads', 'power', 'sanitation', 'water', 'other'];
     
     const stats = await Promise.all(
       departments.map(async (dept) => {
         const [total, staff, pending, assigned, inProgress, resolved, rejected] = await Promise.all([
-          complaintModel.countDocuments({ state, district, category: dept }),
-          userModel.countDocuments({ role: 'staff', state, district, department: dept }),
-          complaintModel.countDocuments({ state, district, category: dept, status: 'pending' }),
-          complaintModel.countDocuments({ state, district, category: dept, status: 'assigned' }),
-          complaintModel.countDocuments({ state, district, category: dept, status: 'in-progress' }),
-          complaintModel.countDocuments({ state, district, category: dept, status: 'resolved' }),
-          complaintModel.countDocuments({ state, district, category: dept, status: 'rejected' })
+          complaintModel.countDocuments({ state: stateRegex, district: districtRegex, category: dept }),
+          userModel.countDocuments({ role: 'staff', state: stateRegex, district: districtRegex, department: dept }),
+          complaintModel.countDocuments({ state: stateRegex, district: districtRegex, category: dept, status: 'pending' }),
+          complaintModel.countDocuments({ state: stateRegex, district: districtRegex, category: dept, status: 'assigned' }),
+          complaintModel.countDocuments({ state: stateRegex, district: districtRegex, category: dept, status: 'in-progress' }),
+          complaintModel.countDocuments({ state: stateRegex, district: districtRegex, category: dept, status: 'resolved' }),
+          complaintModel.countDocuments({ state: stateRegex, district: districtRegex, category: dept, status: 'rejected' })
         ]);
 
         return {

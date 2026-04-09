@@ -23,7 +23,7 @@ export const useAdminPortal = () => {
         throw new Error(data.message || "Not authenticated");
       }
 
-      return data;
+      return data.user;
     } catch (err) {
       setError(err.message);
       return null;

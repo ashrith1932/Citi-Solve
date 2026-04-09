@@ -237,7 +237,7 @@ const SubmitComplaint = () => {
     }
   };
 
-  if (pageLoading) return <div className={styles.pageLoading}>Loading...</div>;
+  if (pageLoading) return <div className="global-spinner-container"><div className="global-spinner"></div></div>;
   if (!user) return null;
 
   return (

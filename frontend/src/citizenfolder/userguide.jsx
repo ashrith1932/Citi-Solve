@@ -115,7 +115,7 @@ const UserGuide = () => {
     navigate("/");
   };
 
-  if (!user) return <div className={styles.loading}>Loading...</div>;
+  if (!user) return <div className="global-spinner-container"><div className="global-spinner"></div></div>;
 
   return (
     <div className={styles.main}>

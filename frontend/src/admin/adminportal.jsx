@@ -108,15 +108,8 @@ const AdminLayout = () => {
   // Full Screen Loader
   if (hookLoading && !user) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        background: '#0a0a0a',
-        color: '#888'
-      }}>
-        <div>Loading...</div>
+      <div className="global-spinner-container">
+        <div className="global-spinner"></div>
       </div>
     );
   }

@@ -111,7 +111,7 @@ const StaffPortal = () => {
 
   // Full Screen Loader: Only show if we are loading AND we don't have a user yet
   if (hookLoading && !user) {
-    return <div className={styles.fullLoading}>Loading...</div>;
+    return <div className="global-spinner-container"><div className="global-spinner"></div></div>;
   }
 
   // Safety check: If not loading but no user, return null (effect will redirect)

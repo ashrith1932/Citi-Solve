@@ -308,7 +308,7 @@ const DepartmentComplaints = () => {
 
   // Full Screen Loader
   if (hookLoading && !user) {
-    return <div className={styles.fullLoading}>Loading...</div>;
+    return <div className="global-spinner-container"><div className="global-spinner"></div></div>;
   }
 
   if (!user) {

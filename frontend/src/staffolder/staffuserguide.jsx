@@ -64,7 +64,7 @@ const UserGuideStaff = () => {
   }, [isProfileDropdownOpen, isSidebarOpen]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <div className="global-spinner-container"><div className="global-spinner"></div></div>;
   }
 
   if (!user) {

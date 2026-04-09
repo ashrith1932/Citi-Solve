@@ -118,7 +118,7 @@ const Complaint = () => {
     return styles.statusresolved;
   };
 
-  if (!user && loading) return <div className={styles.loading}>Loading...</div>;
+  if (!user && loading) return <div className="global-spinner-container"><div className="global-spinner"></div></div>;
   if (!user) return null;
 
   return (

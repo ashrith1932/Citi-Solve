@@ -87,7 +87,7 @@ const FAQ = () => {
     navigate('/');
   };
 
-  if (loading) return <div className={styles.loading}>Loading...</div>;
+  if (loading) return <div className="global-spinner-container"><div className="global-spinner"></div></div>;
   if (!user) return null;
 
   return (

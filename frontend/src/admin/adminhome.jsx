@@ -227,9 +227,8 @@ const DashboardPage = () => {
   // Full Screen Loader
   if (hookLoading && !user) {
     return (
-      <div className={styles.fullLoading}>
-        <div className={styles.spinner}></div>
-        <p>Loading...</p>
+      <div className="global-spinner-container">
+        <div className="global-spinner"></div>
       </div>
     );
   }
